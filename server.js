@@ -3,7 +3,6 @@ const cors = require("cors");
 const path = require("path"); // Import the path module
 
 const app = express();
-const PORT = process.env.PORT || 5000;
 
 const NASA_API_KEY = process.env.NASA_API_KEY || "DEMO_KEY";
 
