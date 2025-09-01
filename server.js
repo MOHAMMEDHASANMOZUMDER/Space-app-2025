@@ -143,7 +143,6 @@ app.get("/api/mars-photos", async (req, res) => {
 });
 
 // Root: serve the app entry from project root
-const path = require("path");
 
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "i3.html"));
