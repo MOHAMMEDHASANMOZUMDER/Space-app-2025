@@ -1,6 +1,5 @@
 const express = require("express");
 const cors = require("cors");
-const path = require("path"); // Import the path module
 
 const app = express();
 
@@ -9,9 +8,7 @@ const NASA_API_KEY = process.env.NASA_API_KEY || "DEMO_KEY";
 app.use(cors());
 app.use(express.json());
 
-// Serve static files: first from mars-backend/public (if you add assets there), then from the project root
-app.use(express.static(path.join(__dirname, 'textures')));
-app.use(express.static(path.resolve(__dirname, '..')));
+// === API routes ===
 
 const wasteTypes = [
   { type: "organic", efficiency: 0.4, byproducts: ["water", "CO2"] },
@@ -23,8 +20,6 @@ const wasteTypes = [
   { type: "other", efficiency: 0.2, byproducts: ["mixed residue"] }
 ];
 
-// This root route is now handled by express.static serving index.html
-// You can keep a separate API root if you wish, e.g., at /api
 app.get("/api", (req, res) => {
   res.json({ message: "🚀 Mars Recycler Backend API is running!" });
 });
@@ -45,8 +40,7 @@ app.get("/api/workflow", (req, res) => {
 
 app.post("/api/process", (req, res) => {
   const { wasteMix, totalWeight } = req.body;
-
-  if (!wasteMix || typeof wasteMix !== 'object' || !totalWeight || totalWeight <= 0) {
+  if (!wasteMix || typeof wasteMix !== "object" || !totalWeight || totalWeight <= 0) {
     return res.status(400).json({ error: "Invalid input. Provide wasteMix object and totalWeight." });
   }
 
@@ -69,6 +63,8 @@ app.post("/api/process", (req, res) => {
   });
 });
 
+// NASA APIs
+
 app.get("/api/mars-weather", async (req, res) => {
   try {
     const url = `https://api.nasa.gov/insight_weather/?api_key=${NASA_API_KEY}&feedtype=json&ver=1.0`;
@@ -77,32 +73,20 @@ app.get("/api/mars-weather", async (req, res) => {
     const data = await r.json();
 
     const keys = Array.isArray(data?.sol_keys) ? data.sol_keys : [];
-    if (keys.length === 0) {
-      return res.json({
-        available: false,
-        note: "No current weather data. InSight mission has ended; feed is archival/irregular.",
-        source: "NASA InSight (archival)",
-      });
-    }
+    if (!keys.length) return res.json({ available: false, note: "No current weather data." });
 
     const latestSol = keys[keys.length - 1];
     const w = data[latestSol] || {};
-    return res.json({
+    res.json({
       available: true,
       sol: latestSol,
       date: w.First_UTC || null,
       temp: w.AT?.av ?? null,
       wind: w.HWS?.av ?? null,
       pressure: w.PRE?.av ?? null,
-      source: "NASA InSight",
     });
   } catch (err) {
-    return res.status(200).json({
-      available: false,
-      note: "Weather feed unreachable or empty.",
-      error: String(err?.message || err),
-      source: "NASA InSight (archival)",
-    });
+    res.status(200).json({ available: false, error: String(err) });
   }
 });
 
@@ -118,36 +102,18 @@ app.get("/api/mars-photos", async (req, res) => {
       const data = await r.json();
       const photos = Array.isArray(data?.photos) ? data.photos : [];
       if (photos.length > 0) {
-        return res.json({
-          photos: photos.slice(0, maxPhotos).map((p) => p.img_src),
-          sol,
-          rover: "Curiosity",
-          source: "NASA Mars Rover Photos",
-        });
+        return res.json({ photos: photos.slice(0, maxPhotos).map(p => p.img_src), sol });
       }
     }
-    return res.json({
-      photos: [],
-      note: "No photos found for fallback sols.",
-      source: "NASA Mars Rover Photos",
-    });
+    res.json({ photos: [], note: "No photos found." });
   } catch (err) {
-    return res.status(200).json({
-      photos: [],
-      note: "Rover photo service unreachable.",
-      error: String(err?.message || err),
-      source: "NASA Mars Rover Photos",
-    });
+    res.status(200).json({ photos: [], error: String(err) });
   }
 });
 
-// Root: serve the app entry from project root
-
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "i3.html"));
-});
+// === Start server ===
 
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-  console.log(`✅ Server running on http://localhost:${PORT}`);
+  console.log(`✅ Backend API running on port ${PORT}`);
 });
