@@ -1,5 +1,5 @@
 {
-  "name": "c",
+  "name": "mars-recycler-backend",
   "version": "1.0.0",
   "description": "Backend API for Mars Waste Management Project - NASA Space Apps",
   "main": "server.js",
@@ -10,6 +10,9 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.21.2"
+  },
+  "engines": {
+    "node": ">=22"
   },
   "author": "",
   "license": "ISC"
