@@ -143,9 +143,12 @@ app.get("/api/mars-photos", async (req, res) => {
 });
 
 // Root: serve the app entry from project root
-app.get('/', (req, res) => {
-  res.sendFile(path.resolve(__dirname, '..', 'index.html'));
+const path = require("path");
+
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "i3.html"));
 });
+
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`✅ Server running on http://localhost:${PORT}`);
