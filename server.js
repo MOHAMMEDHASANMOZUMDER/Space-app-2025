@@ -10,7 +10,7 @@ app.use(cors());
 app.use(express.json());
 
 // Serve static files: first from mars-backend/public (if you add assets there), then from the project root
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'textures')));
 app.use(express.static(path.resolve(__dirname, '..')));
 
 const wasteTypes = [
