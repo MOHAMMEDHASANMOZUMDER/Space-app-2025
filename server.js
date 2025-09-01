@@ -1,15 +1,20 @@
+// server.js
 const express = require("express");
 const cors = require("cors");
+const path = require("path");
+const fetch = require("node-fetch"); // Make sure to install node-fetch v2 for Node <18
 
 const app = express();
-
 const NASA_API_KEY = process.env.NASA_API_KEY || "DEMO_KEY";
 
 app.use(cors());
 app.use(express.json());
 
-// === API routes ===
+// === Serve frontend files ===
+// All files in the same folder as server.js
+app.use(express.static(path.join(__dirname)));
 
+// === API routes ===
 const wasteTypes = [
   { type: "organic", efficiency: 0.4, byproducts: ["water", "CO2"] },
   { type: "plastics", efficiency: 0.3, byproducts: ["syngas", "char"] },
@@ -20,12 +25,15 @@ const wasteTypes = [
   { type: "other", efficiency: 0.2, byproducts: ["mixed residue"] }
 ];
 
+// Health check
 app.get("/api", (req, res) => {
   res.json({ message: "🚀 Mars Recycler Backend API is running!" });
 });
 
+// Waste types
 app.get("/api/waste-types", (req, res) => res.json(wasteTypes));
 
+// Workflow steps
 app.get("/api/workflow", (req, res) => {
   res.json({
     steps: [
@@ -38,6 +46,7 @@ app.get("/api/workflow", (req, res) => {
   });
 });
 
+// Process waste
 app.post("/api/process", (req, res) => {
   const { wasteMix, totalWeight } = req.body;
   if (!wasteMix || typeof wasteMix !== "object" || !totalWeight || totalWeight <= 0) {
@@ -63,12 +72,10 @@ app.post("/api/process", (req, res) => {
   });
 });
 
-// NASA APIs
-
+// NASA InSight weather
 app.get("/api/mars-weather", async (req, res) => {
   try {
-    const url = `https://api.nasa.gov/insight_weather/?api_key=${NASA_API_KEY}&feedtype=json&ver=1.0`;
-    const r = await fetch(url);
+    const r = await fetch(`https://api.nasa.gov/insight_weather/?api_key=${NASA_API_KEY}&feedtype=json&ver=1.0`);
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const data = await r.json();
 
@@ -86,18 +93,18 @@ app.get("/api/mars-weather", async (req, res) => {
       pressure: w.PRE?.av ?? null,
     });
   } catch (err) {
-    res.status(200).json({ available: false, error: String(err) });
+    res.json({ available: false, error: String(err) });
   }
 });
 
+// NASA Mars rover photos
 app.get("/api/mars-photos", async (req, res) => {
   const solsToTry = [1000, 2000, 2500, 3000];
   const maxPhotos = 8;
 
   try {
     for (const sol of solsToTry) {
-      const url = `https://api.nasa.gov/mars-photos/api/v1/rovers/curiosity/photos?sol=${sol}&api_key=${NASA_API_KEY}`;
-      const r = await fetch(url);
+      const r = await fetch(`https://api.nasa.gov/mars-photos/api/v1/rovers/curiosity/photos?sol=${sol}&api_key=${NASA_API_KEY}`);
       if (!r.ok) continue;
       const data = await r.json();
       const photos = Array.isArray(data?.photos) ? data.photos : [];
@@ -107,13 +114,17 @@ app.get("/api/mars-photos", async (req, res) => {
     }
     res.json({ photos: [], note: "No photos found." });
   } catch (err) {
-    res.status(200).json({ photos: [], error: String(err) });
+    res.json({ photos: [], error: String(err) });
   }
 });
 
-// === Start server ===
+// === Serve i3.html at root ===
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "i3.html"));
+});
 
+// === Start server ===
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-  console.log(`✅ Backend API running on port ${PORT}`);
+  console.log(`✅ Backend API running at http://localhost:${PORT}`);
 });
