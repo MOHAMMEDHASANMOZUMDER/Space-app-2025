@@ -265,264 +265,235 @@
   <script src="script.js"></script>
 
   <script>
-    const API_URL = "http://localhost:5000";
-    (function () {
-      const container = document.getElementById("workflow-steps");
-      if (!container) return;
-      fetch(`${API_URL}/api/workflow`)
-        .then((r) => r.json())
-        .then((data) => {
-          container.innerHTML = "";
-          (data.steps || []).forEach((step) => {
-            const div = document.createElement("div");
-            div.className = "data-box";
-            div.textContent = step;
-            container.appendChild(div);
-          });
-        })
-        .catch(() => {
-          container.textContent = "Failed to load workflow.";
-        });
-    })();
+    // Dynamic API URL: localhost for dev, Render backend for live site
+const API_URL = window.location.hostname.includes("github.io")
+  ? "https://space-app-2025-9.onrender.com"
+  : "http://localhost:5000";
 
-    (function () {
-      const container = document.getElementById("waste-list");
-      if (!container) return;
-      fetch(`${API_URL}/api/waste-types`)
-        .then((r) => r.json())
-        .then((data) => {
-          container.innerHTML = "";
-          (data || []).forEach((waste) => {
-            const div = document.createElement("div");
-            div.className = "data-box";
-            const eff = waste.efficiency != null ? (waste.efficiency * 100).toFixed(0) + "%" : "N/A";
-            const byp = Array.isArray(waste.byproducts) ? waste.byproducts.join(", ") : "N/A";
-            div.innerHTML = `<b>${String(waste.type || "").toUpperCase()}</b><br>Efficiency: ${eff}<br>Byproducts: ${byp}`;
-            container.appendChild(div);
-          });
-        })
-        .catch(() => {
-          container.textContent = "Failed to load waste types.";
-        });
-    })();
-    
-    const wasteCategories = [
-        { name: 'Organic', value: 10 },
-        { name: 'Plastics', value: 35 },
-        { name: 'Metals', value: 20 },
-        { name: 'Glass', value: 10 },
-        { name: 'Textiles', value: 15 },
-        { name: 'Electronics', value: 5 },
-        { name: 'Other', value: 5 }
-    ];
-
-    const slidersContainer = document.querySelector('.sliders-container');
-    const resultEl = document.getElementById('process-result');
-    const totalWeightInput = document.getElementById('total-weight');
-    let sliders = [];
-
-    function renderSliders() {
-        slidersContainer.innerHTML = '';
-        sliders = [];
-        wasteCategories.forEach((cat, index) => {
-            const sliderId = `slider-${index}`;
-            const percentageId = `percentage-${index}`;
-            const sliderHTML = `
-                <div class="slider-group">
-                    <label for="${sliderId}">${cat.name}</label>
-                    <input type="range" id="${sliderId}" class="waste-slider" min="0" max="100" value="${cat.value}" data-index="${index}">
-                    <span id="${percentageId}" class="percentage-display">${cat.value}%</span>
-                </div>
-            `;
-            slidersContainer.innerHTML += sliderHTML;
-        });
-
-        sliders = Array.from(document.querySelectorAll('.waste-slider'));
-        sliders.forEach(slider => {
-            slider.addEventListener('input', handleSliderInput);
-        });
-    }
-
-    function handleSliderInput(event) {
-        const changedIndex = parseInt(event.target.dataset.index);
-        let changedValue = parseInt(event.target.value);
-        
-        wasteCategories[changedIndex].value = changedValue;
-
-        const total = wasteCategories.reduce((sum, cat) => sum + cat.value, 0);
-        let diff = total - 100;
-
-        if (diff !== 0) {
-            let remainingSum = 100 - changedValue;
-            let otherSum = total - changedValue;
-            
-            wasteCategories.forEach((cat, index) => {
-                if (index !== changedIndex) {
-                    if (otherSum > 0) {
-                        cat.value = Math.round((cat.value / otherSum) * remainingSum);
-                    } else {
-                        cat.value = Math.round(remainingSum / (wasteCategories.length - 1));
-                    }
-                }
-            });
-        }
-        
-        // Final check to ensure sum is 100 due to rounding
-        let finalSum = wasteCategories.reduce((sum, cat) => sum + cat.value, 0);
-        let sumDiff = 100 - finalSum;
-        if (sumDiff !== 0) {
-            const nonZero = wasteCategories.find(c => c.value > 0 && c.value + sumDiff > 0);
-            if(nonZero) nonZero.value += sumDiff;
-            else wasteCategories[0].value += sumDiff;
-        }
-
-
-        updateUI();
-        simulateProcess();
-    }
-
-    function updateUI() {
-        wasteCategories.forEach((cat, index) => {
-            sliders[index].value = cat.value;
-            document.getElementById(`percentage-${index}`).textContent = `${cat.value}%`;
-        });
-    }
-
-    function simulateProcess() {
-      const totalWeight = parseFloat(totalWeightInput.value);
-      if (!isFinite(totalWeight) || totalWeight <= 0) {
-        resultEl.textContent = "Enter a valid total weight.";
-        return;
-      }
-
-      const wasteMix = wasteCategories.reduce((acc, cat) => {
-        acc[cat.name.toLowerCase()] = cat.value;
-        return acc;
-      }, {});
-
-      fetch(`${API_URL}/api/process`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ wasteMix, totalWeight }),
-      })
-        .then((r) => r.json())
-        .then((res) => {
-          if (res.error) {
-            resultEl.textContent = res.error;
-            return;
-          }
-          const byp = Array.isArray(res.byproducts) ? res.byproducts.join(", ") : "N/A";
-          resultEl.innerHTML =
-            `<b>Processed ${res.input_weight} kg of waste</b><br>
-             Energy Generated: ⚡ ${res.energy_kwh} kWh<br>
-             Byproducts: ${byp}`;
-        })
-        .catch(() => {
-          resultEl.textContent = "Processing failed.";
-        });
-    }
-
-    totalWeightInput.addEventListener('input', simulateProcess);
-
-    document.addEventListener('DOMContentLoaded', () => {
-        renderSliders();
-        simulateProcess();
+(function () {
+  const container = document.getElementById("workflow-steps");
+  if (!container) return;
+  fetch(`${API_URL}/api/workflow`)
+    .then((r) => r.json())
+    .then((data) => {
+      container.innerHTML = "";
+      (data.steps || []).forEach((step) => {
+        const div = document.createElement("div");
+        div.className = "data-box";
+        div.textContent = step;
+        container.appendChild(div);
+      });
+    })
+    .catch(() => {
+      container.textContent = "Failed to load workflow.";
     });
+})();
 
-    function simulateProcessOld() {
-      const typeEl = document.getElementById("waste-type");
-      const weightEl = document.getElementById("waste-weight");
-      const resultEl = document.getElementById("process-result");
-      if (!typeEl || !weightEl || !resultEl) return;
+(function () {
+  const container = document.getElementById("waste-list");
+  if (!container) return;
+  fetch(`${API_URL}/api/waste-types`)
+    .then((r) => r.json())
+    .then((data) => {
+      container.innerHTML = "";
+      (data || []).forEach((waste) => {
+        const div = document.createElement("div");
+        div.className = "data-box";
+        const eff = waste.efficiency != null ? (waste.efficiency * 100).toFixed(0) + "%" : "N/A";
+        const byp = Array.isArray(waste.byproducts) ? waste.byproducts.join(", ") : "N/A";
+        div.innerHTML = `<b>${String(waste.type || "").toUpperCase()}</b><br>Efficiency: ${eff}<br>Byproducts: ${byp}`;
+        container.appendChild(div);
+      });
+    })
+    .catch(() => {
+      container.textContent = "Failed to load waste types.";
+    });
+})();
 
-      const type = typeEl.value;
-      const weight = parseFloat(weightEl.value);
-      if (!isFinite(weight) || weight <= 0) {
-        resultEl.textContent = "Enter a valid weight.";
+// Waste sliders
+const wasteCategories = [
+  { name: 'Organic', value: 10 },
+  { name: 'Plastics', value: 35 },
+  { name: 'Metals', value: 20 },
+  { name: 'Glass', value: 10 },
+  { name: 'Textiles', value: 15 },
+  { name: 'Electronics', value: 5 },
+  { name: 'Other', value: 5 }
+];
+
+const slidersContainer = document.querySelector('.sliders-container');
+const resultEl = document.getElementById('process-result');
+const totalWeightInput = document.getElementById('total-weight');
+let sliders = [];
+
+function renderSliders() {
+  slidersContainer.innerHTML = '';
+  sliders = [];
+  wasteCategories.forEach((cat, index) => {
+    const sliderId = `slider-${index}`;
+    const percentageId = `percentage-${index}`;
+    const sliderHTML = `
+      <div class="slider-group">
+        <label for="${sliderId}">${cat.name}</label>
+        <input type="range" id="${sliderId}" class="waste-slider" min="0" max="100" value="${cat.value}" data-index="${index}">
+        <span id="${percentageId}" class="percentage-display">${cat.value}%</span>
+      </div>
+    `;
+    slidersContainer.innerHTML += sliderHTML;
+  });
+
+  sliders = Array.from(document.querySelectorAll('.waste-slider'));
+  sliders.forEach(slider => {
+    slider.addEventListener('input', handleSliderInput);
+  });
+}
+
+function handleSliderInput(event) {
+  const changedIndex = parseInt(event.target.dataset.index);
+  let changedValue = parseInt(event.target.value);
+  
+  wasteCategories[changedIndex].value = changedValue;
+
+  const total = wasteCategories.reduce((sum, cat) => sum + cat.value, 0);
+  let diff = total - 100;
+
+  if (diff !== 0) {
+    let remainingSum = 100 - changedValue;
+    let otherSum = total - changedValue;
+    
+    wasteCategories.forEach((cat, index) => {
+      if (index !== changedIndex) {
+        if (otherSum > 0) {
+          cat.value = Math.round((cat.value / otherSum) * remainingSum);
+        } else {
+          cat.value = Math.round(remainingSum / (wasteCategories.length - 1));
+        }
+      }
+    });
+  }
+  
+  let finalSum = wasteCategories.reduce((sum, cat) => sum + cat.value, 0);
+  let sumDiff = 100 - finalSum;
+  if (sumDiff !== 0) {
+    const nonZero = wasteCategories.find(c => c.value > 0 && c.value + sumDiff > 0);
+    if(nonZero) nonZero.value += sumDiff;
+    else wasteCategories[0].value += sumDiff;
+  }
+
+  updateUI();
+  simulateProcess();
+}
+
+function updateUI() {
+  wasteCategories.forEach((cat, index) => {
+    sliders[index].value = cat.value;
+    document.getElementById(`percentage-${index}`).textContent = `${cat.value}%`;
+  });
+}
+
+function simulateProcess() {
+  const totalWeight = parseFloat(totalWeightInput.value);
+  if (!isFinite(totalWeight) || totalWeight <= 0) {
+    resultEl.textContent = "Enter a valid total weight.";
+    return;
+  }
+
+  const wasteMix = wasteCategories.reduce((acc, cat) => {
+    acc[cat.name.toLowerCase()] = cat.value;
+    return acc;
+  }, {});
+
+  fetch(`${API_URL}/api/process`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ wasteMix, totalWeight }),
+  })
+    .then((r) => r.json())
+    .then((res) => {
+      if (res.error) {
+        resultEl.textContent = res.error;
+        return;
+      }
+      const byp = Array.isArray(res.byproducts) ? res.byproducts.join(", ") : "N/A";
+      resultEl.innerHTML =
+        `<b>Processed ${res.input_weight} kg of waste</b><br>
+         Energy Generated: ⚡ ${res.energy_kwh} kWh<br>
+         Byproducts: ${byp}`;
+    })
+    .catch(() => {
+      resultEl.textContent = "Processing failed.";
+    });
+}
+
+totalWeightInput.addEventListener('input', simulateProcess);
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderSliders();
+  simulateProcess();
+});
+
+// Mars weather
+(function () {
+  const box = document.getElementById("mars-weather");
+  if (!box) return;
+  fetch(`${API_URL}/api/mars-weather`)
+    .then((r) => r.json())
+    .then((res) => {
+      if (!res.available) {
+        box.innerHTML = `Weather Unavailable<br><small>${res.note || "No data returned."}</small>`;
+        return;
+      }
+      box.innerHTML =
+        `<b>Sol ${res.sol ?? "N/A"}</b><br>
+         Date: ${res.date ? new Date(res.date).toDateString() : "N/A"}<br>
+         Temperature: ${res.temp != null ? res.temp + " °C" : "N/A"}<br>
+         Wind: ${res.wind != null ? res.wind + " m/s" : "N/A"}<br>
+         Pressure: ${res.pressure != null ? res.pressure + " Pa" : "N/A"}<br>
+         <small>Source: ${res.source || "NASA"}</small>`;
+    })
+    .catch(() => {
+      box.textContent = "Failed to load Mars weather.";
+    });
+})();
+
+// Mars photos
+(function () {
+  const container = document.getElementById("mars-photos");
+  if (!container) return;
+
+  container.textContent = "Loading photos...";
+
+  fetch(`${API_URL}/api/mars-photos`)
+    .then((r) => r.json())
+    .then((res) => {
+      const photos = Array.isArray(res.photos) ? res.photos : [];
+      container.innerHTML = "";
+
+      if (photos.length === 0) {
+        container.innerHTML = `No photos available.<br><small>${res.note || ""}</small>`;
         return;
       }
 
-      fetch(`${API_URL}/api/process`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type, weight }),
-      })
-        .then((r) => r.json())
-        .then((res) => {
-          if (res.error) {
-            resultEl.textContent = res.error;
-            return;
-          }
-          const byp = Array.isArray(res.byproducts) ? res.byproducts.join(", ") : "N/A";
-          resultEl.innerHTML =
-            `<b>Processed ${res.input_weight} kg of ${res.type} waste</b><br>
-             Energy Generated: ⚡ ${res.energy_kwh} kWh<br>
-             Byproducts: ${byp}`;
-        })
-        .catch(() => {
-          resultEl.textContent = "Processing failed.";
-        });
-    }
+      const meta = document.createElement("div");
+      meta.style.marginBottom = "8px";
+      meta.innerHTML = `<small>Rover: ${res.rover || "Curiosity"} • Sol: ${res.sol ?? "—"} • Source: ${res.source || "NASA"}</small>`;
+      container.appendChild(meta);
 
-    (function () {
-      const box = document.getElementById("mars-weather");
-      if (!box) return;
-      fetch(`${API_URL}/api/mars-weather`)
-        .then((r) => r.json())
-        .then((res) => {
-          if (!res.available) {
-            box.innerHTML = `Weather Unavailable<br><small>${res.note || "No data returned."}</small>`;
-            return;
-          }
-          box.innerHTML =
-            `<b>Sol ${res.sol ?? "N/A"}</b><br>
-             Date: ${res.date ? new Date(res.date).toDateString() : "N/A"}<br>
-             Temperature: ${res.temp != null ? res.temp + " °C" : "N/A"}<br>
-             Wind: ${res.wind != null ? res.wind + " m/s" : "N/A"}<br>
-             Pressure: ${res.pressure != null ? res.pressure + " Pa" : "N/A"}<br>
-             <small>Source: ${res.source || "NASA"}</small>`;
-        })
-        .catch(() => {
-          box.textContent = "Failed to load Mars weather.";
-        });
-    })();
+      photos.forEach((src) => {
+        const img = document.createElement("img");
+        img.src = src;
+        img.alt = "Mars rover";
+        img.style.width = "200px";
+        img.style.margin = "5px";
+        img.loading = "lazy";
+        container.appendChild(img);
+      });
+    })
+    .catch(() => {
+      container.textContent = "Failed to load rover photos.";
+    });
+})();
 
-    (function () {
-      const container = document.getElementById("mars-photos");
-      if (!container) return;
-
-      container.textContent = "Loading photos...";
-
-      fetch(`${API_URL}/api/mars-photos`)
-        .then((r) => r.json())
-        .then((res) => {
-          const photos = Array.isArray(res.photos) ? res.photos : [];
-          container.innerHTML = "";
-
-          if (photos.length === 0) {
-            container.innerHTML = `No photos available.<br><small>${res.note || ""}</small>`;
-            return;
-          }
-
-          const meta = document.createElement("div");
-          meta.style.marginBottom = "8px";
-          meta.innerHTML = `<small>Rover: ${res.rover || "Curiosity"} • Sol: ${res.sol ?? "—"} • Source: ${res.source || "NASA"}</small>`;
-          container.appendChild(meta);
-
-          photos.forEach((src) => {
-            const img = document.createElement("img");
-            img.src = src;
-            img.alt = "Mars rover";
-            img.style.width = "200px";
-            img.style.margin = "5px";
-            img.loading = "lazy";
-            container.appendChild(img);
-          });
-        })
-        .catch(() => {
-          container.textContent = "Failed to load rover photos.";
-        });
-    })();
   </script>
 </body>
 </html>
